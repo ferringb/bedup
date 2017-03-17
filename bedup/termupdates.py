@@ -19,6 +19,7 @@
 import collections
 import string
 import sys
+import time
 
 from .platform.time import monotonic_time
 
@@ -78,12 +79,18 @@ class TermTemplate(object):
         # knowing this is stdout:
         self._newline_needs_flush = not self._isatty
         self._wraps = True
+        self.last_update = 0
 
     def update(self, **kwargs):
         self._kws.update(kwargs)
         for key in kwargs:
             self._kws_counter[key] += 1
-        self._render(with_newline=False)
+        # Only update 10/s, else we spend way too much CPU
+        # time just maintaining status updates.
+        now = time.time()
+        if now > self.last_update + .1:
+            self._render(with_newline=False)
+            self.last_update = now
 
     def set_total(self, **kwargs):
         self._kws_totals.update(kwargs)
